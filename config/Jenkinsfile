@@ -15,7 +15,7 @@ pipeline {
 	environment {
         CRED_NEXUS = credentials('easywareNexusAdmin')
 		CRED_SONAR = credentials('easywareSonarJenkins')
-		CRED_MYSQL = credentials('easywareMysqlBolao')
+		CRED_MYSQL = credentials('easywareMysqlTimesheet')
     }
 
 	stages {
