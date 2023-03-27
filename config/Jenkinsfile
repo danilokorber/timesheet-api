@@ -92,7 +92,7 @@ pipeline {
 					sh "touch ${props.jenkins.docker.labels}"
 					sh "echo 'traefik.enable=true' >> ${props.jenkins.docker.labels}"
 					sh "echo 'traefik.http.routers.${props.name}.entrypoints=websecure' >> ${props.jenkins.docker.labels}"
-					sh "echo 'traefik.http.routers.${props.name}.rule=Host(`${props.jenkins.url.host}.${props.jenkins.url.domain}`)' >> ${props.jenkins.docker.labels}"
+					sh "echo 'traefik.http.routers.${props.name}.rule=Host(`schuster-api.korber.com.br`)' >> ${props.jenkins.docker.labels}"
 					sh "echo 'traefik.http.routers.${props.name}.tls.certresolver=${props.jenkins.traefik.resolver}' >> ${props.jenkins.docker.labels}"
 				}
 			}
