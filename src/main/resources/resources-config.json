@@ -1,0 +1,7 @@
+{
+  "resources": [
+    {
+      "pattern": "keystore\\.jks$"
+    }
+  ]
+}

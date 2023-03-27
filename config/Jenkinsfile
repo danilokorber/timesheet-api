@@ -1,0 +1,126 @@
+//============================================================================
+//  ONLY CHANGE THE FOLLOWING IF YOU KNOW WHAT YOU ARE DOING
+//============================================================================
+def randomUUID = UUID.randomUUID().toString()
+def randomPort = Math.abs(new Random().nextInt() % 50) + 3001
+def props
+
+pipeline {
+	agent {
+        docker {
+            image 'dkorber/java-node:1.0.0'
+            args '-p ' + randomPort + ':' + randomPort + ' -v /var/run/docker.sock:/var/run/docker.sock --name jenkins-' + randomUUID
+        }
+    }
+	environment {
+        CRED_NEXUS = credentials('easywareNexusAdmin')
+		CRED_SONAR = credentials('easywareSonarJenkins')
+		CRED_MYSQL = credentials('easywareMysqlBolao')
+    }
+
+	stages {
+
+		stage("Prepare environment") {
+			steps{
+				script {
+					// Read application name and version from package.json file
+					props = readJSON file: './config/settings.json'
+
+					echo "applicationName: ${props.name}"
+					echo "applicationVersion: ${props.version}"
+					//sh "npm config set registry https://${props.jenkins.nexus.hostname}/repositoryCostCenter/easyware-npm-group"
+					sh "docker login -u ${CRED_NEXUS_USR} -p ${CRED_NEXUS_PSW} ${props.jenkins.nexus.hostname}:${props.jenkins.nexus.hostedPort}"
+				}
+			}
+		}
+
+		stage("Maven verify") {
+			steps{
+				script {
+					sh "mvn clean verify -e"
+				}
+			}
+		}
+
+		stage("Set sonar settings") {
+			steps{
+				script{
+					sh "echo 'sonar.host.url=${props.jenkins.sonar.host}' >> ${props.jenkins.sonar.properties}"
+					sh "echo 'sonar.login=${CRED_SONAR_USR}' >> ${props.jenkins.sonar.properties}"
+					sh "echo 'sonar.password=${CRED_SONAR_PSW}' >> ${props.jenkins.sonar.properties}"
+					sh "echo 'sonar.projectKey=${props.name}' >> ${props.jenkins.sonar.properties}"
+					sh "echo 'sonar.projectName=${props.name}' >> ${props.jenkins.sonar.properties}"
+				}
+			}
+		}
+
+// 		stage("Lint") {
+// 			steps{
+// 				script {
+// 				    withSonarQubeEnv(credentialsId: 'easywareSonarPluginAdmin', installationName: 'Easyware Sonar') { // You can override the credential to be used
+//                         sh 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.7.0.1746:sonar'
+//                     }
+// 				}
+//
+// 			}
+// 		}
+
+		stage("Build docker") {
+			steps{
+				script {
+					sh "docker build -f src/main/docker/Dockerfile.jvm -t ${props.jenkins.nexus.imageGroup}/${props.name} ."
+					sh "docker tag ${props.jenkins.nexus.imageGroup}/${props.name} ${props.jenkins.nexus.hostname}:${props.jenkins.nexus.hostedPort}/${props.jenkins.nexus.imageGroup}/${props.name}:${props.version}"
+					sh "docker tag ${props.jenkins.nexus.imageGroup}/${props.name} ${props.jenkins.nexus.hostname}:${props.jenkins.nexus.hostedPort}/${props.jenkins.nexus.imageGroup}/${props.name}:latest"
+					sh "docker push ${props.jenkins.nexus.hostname}:${props.jenkins.nexus.hostedPort}/${props.jenkins.nexus.imageGroup}/${props.name}:${props.version}"
+					sh "docker push ${props.jenkins.nexus.hostname}:${props.jenkins.nexus.hostedPort}/${props.jenkins.nexus.imageGroup}/${props.name}:latest"
+				}
+			}
+		}
+
+// 		stage("Create DNS record") {
+// 			steps{
+// 				script{
+// 					def azureCmd = "az network dns record-set cname set-record -g ${props.jenkins.dns.resourceGroup} -z ${props.jenkins.dns.domain} -n ${props.jenkins.dns.host} -c ${props.jenkins.dns.cname}"
+// 					sh "docker run dkorber/azure ${azureCmd}"
+// 				}
+// 			}
+// 		}
+
+		stage("Prepare docker deployment") {
+			steps{
+				script{
+					sh "touch ${props.jenkins.docker.labels}"
+					sh "echo 'traefik.enable=true' >> ${props.jenkins.docker.labels}"
+					sh "echo 'traefik.http.routers.${props.name}.entrypoints=websecure' >> ${props.jenkins.docker.labels}"
+					sh "echo 'traefik.http.routers.${props.name}.rule=Host(`${props.jenkins.dns.host}.${props.jenkins.dns.domain}`)' >> ${props.jenkins.docker.labels}"
+					sh "echo 'traefik.http.routers.${props.name}.tls.certresolver=${props.jenkins.traefik.resolver}' >> ${props.jenkins.docker.labels}"
+				}
+			}
+		}
+
+		stage("Start docker") {
+			steps{
+				script {
+					sh "docker stop ${props.name} || true && docker rm ${props.name} || true"
+					sh """docker run -d \
+					                 --network ${props.jenkins.docker.network} \
+					                 --name ${props.name} \
+					                 -e MYSQL_USR=${CRED_MYSQL_USR} \
+					                 -e MYSQL_PWD=${CRED_MYSQL_PSW} \
+									 --label-file ${props.jenkins.docker.labels} \
+									 ${props.jenkins.nexus.imageGroup}/${props.name}"""
+					sh "rm ${props.jenkins.docker.labels}"
+				}
+			}
+		}
+
+		stage("Prune docker") {
+			steps{
+				script {
+					sh "docker system prune -f"
+				}
+			}
+		}
+
+	}
+}

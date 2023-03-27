@@ -1,0 +1,9 @@
+CREATE TABLE time_record (
+  id VARCHAR(36) NOT NULL UNIQUE,
+  employee_id VARCHAR(36) NOT NULL,
+  start_time TIMESTAMP WITH TIME ZONE,
+  end_time TIMESTAMP WITH TIME ZONE,
+  PRIMARY KEY (id)
+);
+
+COMMIT;

@@ -1,0 +1,14 @@
+# ============================================================================================================
+#    DATABASE
+#
+DB_HOST=localhost
+DB_SCHEMA=mtnext
+DB_USER=postgres
+DB_PASSWORD=mysecretpassword
+
+# ============================================================================================================
+#    WEBEAM
+#
+WEBEAM_OIDC_PROVIDER=https://auth-i.bmwgroup.net:443/auth/oauth2/realms/root/realms/intranetb2x
+WEBEAM_OIDC_CLIENT_ID=
+WEBEAM_OIDC_CLIENT_SECRET=

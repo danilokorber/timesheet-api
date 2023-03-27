@@ -1,0 +1,30 @@
+{
+  "name": "timesheet-api",
+  "version": "1.0.0",
+  "jenkins": {
+    "urls": [
+      {
+        "host": "schuster-api",
+        "domain": "korber.com.br",
+        "service": "schuster"
+      }
+    ],
+    "traefik": {
+      "resolver": "easywareresolver"
+    },
+    "nexus": {
+      "hostname": "nexus.easyware.io",
+      "hostedPort": 8083,
+      "groupPort": 8082,
+      "imageGroup": "easyware"
+    },
+    "docker": {
+      "labels": "./config/dockerLabels.txt",
+      "network": "easyware"
+    },
+    "sonar": {
+      "host": "https://sonar.easyware.io",
+      "properties": "./config/sonar.properties"
+    }
+  }
+}
