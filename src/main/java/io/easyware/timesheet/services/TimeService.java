@@ -8,10 +8,12 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 import javax.transaction.Transactional;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.temporal.TemporalAdjusters;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -79,6 +81,28 @@ public class TimeService {
                 .setParameter("employeeId", employeeId)
                 .setParameter("start", startOfMonthOffset)
                 .setParameter("end", endOfMonthOffset);
+
+        return query.getResultList();
+    }
+
+    public List<TimeRecord> getTimeRecordsForCurrentWeek(String employeeId) {
+        LocalDateTime sunday = LocalDateTime.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY)).withHour(0).withMinute(0).withSecond(0);
+        LocalDateTime nextSunday = sunday.plusWeeks(1);
+        OffsetDateTime sundayOffset = sunday.atOffset(ZoneOffset.UTC);
+        OffsetDateTime nextSundayOffset = nextSunday.atOffset(ZoneOffset.UTC);
+
+        log.info("Getting time records from " + sundayOffset.toString() + " to " + nextSundayOffset.toString() + " for employee " + employeeId);
+
+        TypedQuery<TimeRecord> query = entityManager.createQuery("SELECT tr FROM TimeRecord tr WHERE tr.employeeId = :employeeId AND tr.start BETWEEN :start AND :end", TimeRecord.class)
+                .setParameter("employeeId", employeeId)
+                .setParameter("start", sundayOffset)
+                .setParameter("end", nextSundayOffset);
+
+//        TypedQuery<TimeRecord> query = entityManager.createQuery(
+//                "SELECT tr FROM TimeRecord tr WHERE tr.employeeId = :employeeId AND WEEK(tr.startTime) = WEEK(CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) - 1) DAY)",
+//                TimeRecord.class
+//        );
+//        query.setParameter("employeeId", employeeId);
 
         return query.getResultList();
     }

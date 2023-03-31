@@ -43,6 +43,16 @@ public class TimesheetsResourceV1 extends TimesheetsResource {
     }
 
     @GET
+    @Path("/week/{id}")
+    public Response getCurrentWeekTimeRecords(@PathParam("id") String id) {
+        List<TimeRecord> timeRecords = timeService.getTimeRecordsForCurrentWeek(id);
+        if (timeRecords.isEmpty()) {
+            return Response.noContent().build();
+        }
+        return Response.ok(timeService.report(timeRecords)).build();
+    }
+
+    @GET
     @Path("/previous/{id}")
     public Response getPreviousMonthTimeRecords(@PathParam("id") String id) {
         LocalDate previousMonthDate = LocalDate.now().minusMonths(1);
